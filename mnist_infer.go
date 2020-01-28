@@ -19,7 +19,7 @@ func runInferenceModel(imgsForTensor [1][3][224][224]float32) {
 	// Load a frozen graph to use for queries
 	// modelpath := filepath.Join("mnistmodel/", "SavedModel.pb")
 	// trial_modelPath := filepath.Join("/Users/kahlil/projects/holmusk/Food Scoring Eval/go/mnist_infer/models/trial_model/", "model.pb")
-	food_notFoodModelPath := filepath.Join("models/Food Not-food models/", "epoch_149.pb")
+	food_notFoodModelPath := filepath.Join("/Users/kahlil/Documents/AIA AI Food Scoring /S3 AIA models/Phase1/TF/models/FoodOrNonfood/", "epoch_149.pb")
 	model, err := ioutil.ReadFile(food_notFoodModelPath)
 	if err != nil {
 		log.Fatal(err)
@@ -55,10 +55,8 @@ func runInferenceModel(imgsForTensor [1][3][224][224]float32) {
 	result, runErr := session.Run(
 		map[tf.Output]*tf.Tensor{
 			graph.Operation("IO/input").Output(0): newTensor,
-			// graph.Operation("IO/keep_probability").Output(0): constTensor,
 		},
 		[]tf.Output{
-			// graph.Operation("metric/yhat").Output(0),
 			graph.Operation("IO/output").Output(0),
 		},
 		nil,
@@ -69,7 +67,20 @@ func runInferenceModel(imgsForTensor [1][3][224][224]float32) {
 		return
 	}
 
-	fmt.Printf("Output of running model:  %v \n", result[0].Value())
+	// var tensorValInGo [2]float32
+	tensorValInGo := result[0].Value()
+	logitsVal, _ := tensorValInGo.([][]float32)
+	logitSlice := logitsVal[0]
+	firstLogit, secondLogit := logitSlice[0], logitSlice[1]
+	var resultOfModel int
+	if firstLogit > secondLogit {
+		resultOfModel = 0
+	} else if firstLogit < secondLogit {
+		resultOfModel = 1
+	} else {
+		resultOfModel = -1
+	}
+	fmt.Printf("Logits:  %v %v Result: %v", firstLogit, secondLogit, resultOfModel)
 
 }
 

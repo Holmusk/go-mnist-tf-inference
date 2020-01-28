@@ -11,9 +11,10 @@ import (
 func main() {
 
 	// notFoodImgPath := "/Users/kahlil/Pictures/plate-food.jpg"
-	foodImgPath := "/Users/kahlil/Documents/AIA AI Food Scoring /Food NotFood testing/Test1 /Images for testing/8453869e-d8ce-4009-8011-8a20b58b2037-large-thumb.jpg"
-
-	filename := foodImgPath
+	// foodImgPath := "/Users/kahlil/Documents/AIA AI Food Scoring /Food NotFood testing/Test1 /Images for testing/8453869e-d8ce-4009-8011-8a20b58b2037-large-thumb.jpg"
+	// plateFoodImgPath := "/Users/kahlil/Documents/AIA AI Food Scoring /Food NotFood testing/S3 rated imgs/1.0/2.jpg"
+	s3FoodImgPath := "/Users/kahlil/Documents/AIA AI Food Scoring /Food NotFood testing/S3 rated imgs/3.5/1.jpg"
+	filename := s3FoodImgPath
 
 	img := gocv.IMRead(filename, gocv.IMReadColor)
 	if img.Empty() {
@@ -49,6 +50,18 @@ func main() {
 
 }
 
+func standardizeRed(inputPixelVal float32) (standardizedVal float32) {
+	return (inputPixelVal - 0.485) / 0.229
+}
+
+func standardizeGreen(inputPixelVal float32) (standardizedVal float32) {
+	return (inputPixelVal - 0.456) / 0.224
+}
+
+func standardizeBlue(inputPixelVal float32) (standardizedVal float32) {
+	return (inputPixelVal - 0.406) / 0.225
+}
+
 func reshapeImgPixelsForTensor(resizedImg gocv.Mat) (imgForTensor [3][224][224]float32, err error) {
 
 	var allChannelsImgPixels [3][224][224]float32
@@ -67,9 +80,9 @@ func reshapeImgPixelsForTensor(resizedImg gocv.Mat) (imgForTensor [3][224][224]f
 		// var row [][]uint8
 		widthCtr := 0
 		for x := 0; x < step; x = x + channels {
-			B := float32(uint8(imgData[y*step+x])) / 255.0
-			G := float32(uint8(imgData[y*step+x+1])) / 255.0
-			R := float32(uint8(imgData[y*step+x+2])) / 255.0
+			B := standardizeBlue(float32(uint8(imgData[y*step+x])) / 255.0)
+			G := standardizeGreen(float32(uint8(imgData[y*step+x+1])) / 255.0)
+			R := standardizeRed(float32(uint8(imgData[y*step+x+2])) / 255.0)
 			if channels == 4 {
 				_ = uint8(imgData[y*step+x+3])
 			}
