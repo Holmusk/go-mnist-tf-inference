@@ -9,12 +9,7 @@ import (
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
 
-func runInferenceModel(imgsForTensor [1][3][224][224]float32) {
-
-	// train, _, err := mnistdata.Load("/Users/kahlil/projects/holmusk/Food Scoring Eval/go/GoMNIST/data")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+func runInferenceModel(imgPaths []string, imgsForTensor [][3][224][224]float32) {
 
 	// Load a frozen graph to use for queries
 	// modelpath := filepath.Join("mnistmodel/", "SavedModel.pb")
@@ -70,17 +65,20 @@ func runInferenceModel(imgsForTensor [1][3][224][224]float32) {
 	// var tensorValInGo [2]float32
 	tensorValInGo := result[0].Value()
 	logitsVal, _ := tensorValInGo.([][]float32)
-	logitSlice := logitsVal[0]
-	firstLogit, secondLogit := logitSlice[0], logitSlice[1]
-	var resultOfModel int
-	if firstLogit > secondLogit {
-		resultOfModel = 0
-	} else if firstLogit < secondLogit {
-		resultOfModel = 1
-	} else {
-		resultOfModel = -1
+	for idx := 0; idx < len(logitsVal); idx++ {
+		logitSlice := logitsVal[idx]
+		firstLogit, secondLogit := logitSlice[0], logitSlice[1]
+		var resultOfModel int
+		if firstLogit > secondLogit {
+			resultOfModel = 0
+		} else if firstLogit < secondLogit {
+			resultOfModel = 1
+		} else {
+			resultOfModel = -1
+		}
+		fmt.Printf("Img: %v  ", imgPaths[idx])
+		fmt.Printf("Logits:  %v %v Result: %v \n", firstLogit, secondLogit, resultOfModel)
 	}
-	fmt.Printf("Logits:  %v %v Result: %v", firstLogit, secondLogit, resultOfModel)
 
 }
 

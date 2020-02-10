@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"log"
+	"os"
 
 	"gocv.io/x/gocv"
 )
@@ -13,42 +14,60 @@ func main() {
 	// notFoodImgPath := "/Users/kahlil/Pictures/plate-food.jpg"
 	// foodImgPath := "/Users/kahlil/Documents/AIA AI Food Scoring /Food NotFood testing/Test1 /Images for testing/8453869e-d8ce-4009-8011-8a20b58b2037-large-thumb.jpg"
 	// plateFoodImgPath := "/Users/kahlil/Documents/AIA AI Food Scoring /Food NotFood testing/S3 rated imgs/1.0/2.jpg"
-	s3FoodImgPath := "/Users/kahlil/Documents/AIA AI Food Scoring /Food NotFood testing/S3 rated imgs/3.5/1.jpg"
-	filename := s3FoodImgPath
+	// s3FoodImgPath := "/Users/kahlil/Documents/AIA AI Food Scoring /Food NotFood testing/S3 rated imgs/1.0/2.jpg"
 
-	img := gocv.IMRead(filename, gocv.IMReadColor)
-	if img.Empty() {
-		fmt.Printf("Error reading image from: %v\n", filename)
-		return
+	// NOTE : It is VERY important that the folder(dir) path is given with a trailing slash
+	// If this is ever going to be anywhere near production then
+	// we need to find a better way to add the file name to the directory (folder) path
+	foodImgsFolderPath := os.Args[1]
+
+	// filename := s3FoodImgPath
+
+	file, openErr := os.Open(foodImgsFolderPath)
+	if openErr != nil {
+		log.Fatal(openErr)
 	}
-
-	resizedImg := gocv.NewMat()
-
-	gocv.Resize(img, &resizedImg, image.Pt(224, 224), 0.0, 0.0, gocv.InterpolationCubic)
-
-	imgPixels, errMsg := reshapeImgPixelsForTensor(resizedImg)
-	if errMsg != nil {
-		log.Fatal(errMsg)
+	imgFileNames, readNamesErr := file.Readdirnames(0)
+	if readNamesErr != nil {
+		log.Fatal(readNamesErr)
 	}
-	var singleImgPixelArray [1][3][224][224]float32
-	singleImgPixelArray[0] = imgPixels
-	runInferenceModel(singleImgPixelArray)
-	fmt.Println()
-	// TEST : SHOW Resized Image in a window
+	fmt.Println(imgFileNames)
+	imgCount := len(imgFileNames)
+	fmt.Println("Image count: ", imgCount)
+	var allImgsPixelsArray [][3][224][224]float32
 
-	// window := gocv.NewWindow("Hello")
-	// for {
-	// 	window.IMShow(resizedImg)
-	// 	if window.WaitKey(1) >= 0 {
-	// 		break
-	// 	}
-	// }
+	for idx := 0; idx < imgCount; idx++ {
+		currentImgFileName := foodImgsFolderPath + (imgFileNames[idx])
+		// fmt.Printf("Current file name: %v\n", currentImgFileName)
 
-	// width := resizedImg.Cols()
+		// for each image file, we need to get the file and then create the tensor and pass it to
+		// our function that accepts the tensor (of all imgs) and loads and runs the model.
 
-	// return pixels
+		img := gocv.IMRead(currentImgFileName, gocv.IMReadColor)
+		if img.Empty() {
+			fmt.Printf("Error reading image from: %v\n", currentImgFileName)
+			return
+		}
+
+		resizedImg := gocv.NewMat()
+		gocv.Resize(img, &resizedImg, image.Pt(224, 224), 0.0, 0.0, gocv.InterpolationCubic)
+
+		imgPixels, errMsg := reshapeImgPixelsForTensor(resizedImg)
+		if errMsg != nil {
+			log.Fatal(errMsg)
+		}
+		// allImgsPixelsArray[idx] = imgPixels
+		allImgsPixelsArray = append(allImgsPixelsArray, imgPixels)
+	}
+	runInferenceModel(imgFileNames, allImgsPixelsArray)
 
 }
+
+// func getImgFileNamesInFolder (){}
+
+// func readAndResizeImage(){}
+
+// func
 
 func standardizeRed(inputPixelVal float32) (standardizedVal float32) {
 	return (inputPixelVal - 0.485) / 0.229
@@ -96,9 +115,26 @@ func reshapeImgPixelsForTensor(resizedImg gocv.Mat) (imgForTensor [3][224][224]f
 			bluePixels[y][widthCtr-1] = B
 		}
 	}
-	allChannelsImgPixels[0] = bluePixels
+	allChannelsImgPixels[0] = redPixels
 	allChannelsImgPixels[1] = greenPixels
-	allChannelsImgPixels[2] = redPixels
+	allChannelsImgPixels[2] = bluePixels
+
+	// To be used for debugging Pixel values of each channel for comparison with Rust & Python
+	// for ctrVal := 0; ctrVal < 10; ctrVal++ {
+	// 	fmt.Println("Red channel first 10 pixels :", redPixels[0][ctrVal])
+	// }
+
+	// fmt.Println()
+
+	// for ctrVal := 0; ctrVal < 10; ctrVal++ {
+	// 	fmt.Println("Green Channel first 10 pixels :", greenPixels[0][ctrVal])
+	// }
+
+	// fmt.Println()
+
+	// for ctrVal := 0; ctrVal < 10; ctrVal++ {
+	// 	fmt.Println("Blue Channel first 10 pixels :", bluePixels[0][ctrVal])
+	// }
 
 	return allChannelsImgPixels, nil
 	// 	// var a [4]int
@@ -154,3 +190,17 @@ func reshapeImgPixelsForTensor(resizedImg gocv.Mat) (imgForTensor [3][224][224]f
 	// 	}
 
 }
+
+// TEST : SHOW Resized Image in a window
+
+// window := gocv.NewWindow("Hello")
+// for {
+// 	window.IMShow(resizedImg)
+// 	if window.WaitKey(1) >= 0 {
+// 		break
+// 	}
+// }
+
+// width := resizedImg.Cols()
+
+// return pixels
